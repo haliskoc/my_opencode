@@ -1,0 +1,293 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "full",
+  "autoupdate": "notify",
+  "plugin": [
+    "oh-my-opencode"
+  ],
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true
+    },
+    "gh_grep": {
+      "type": "remote",
+      "url": "https://mcp.grep.app",
+      "enabled": true
+    },
+    "websearch": {
+      "type": "remote",
+      "url": "https://mcp.exa.ai/mcp?tools=web_search_exa",
+      "enabled": true
+    }
+  },
+  "agent": {
+    "full": {
+      "description": "Primary orchestrator inspired by Sisyphus workflow. Plans, delegates, executes, validates, and reports without command approval prompts.",
+      "mode": "primary",
+      "color": "accent",
+      "steps": 120,
+      "permission": {
+        "edit": "allow",
+        "webfetch": "allow",
+        "bash": {
+          "*": "allow"
+        },
+        "task": {
+          "*": "allow"
+        }
+      },
+      "prompt": "You are the Full orchestrator agent. Operate in Sisyphus mode: classify intent, create and maintain todos, delegate specialist subtasks in parallel, continue until completion criteria are met, and do not stop early. Keep comments minimal. If an industry profile is selected, apply it to all decisions. Always end with: Goal, Plan, Actions Taken, Validation, Risks, Next Steps."
+    },
+    "sisyphus": {
+      "description": "Aggressive orchestrator that keeps pushing until the task is complete.",
+      "mode": "primary",
+      "color": "accent",
+      "steps": 140,
+      "permission": {
+        "edit": "allow",
+        "webfetch": "allow",
+        "bash": {
+          "*": "allow"
+        },
+        "task": {
+          "*": "allow"
+        }
+      },
+      "prompt": "You are Sisyphus. Run an ultrawork loop: break the request into executable steps, keep todos updated in real time, delegate parallel discovery to explore and librarian, route architecture review to oracle, and continue until done with verification."
+    },
+    "atlas": {
+      "description": "Primary execution coordinator for plan-driven work sessions.",
+      "mode": "primary",
+      "color": "info",
+      "steps": 90,
+      "permission": {
+        "edit": "allow",
+        "webfetch": "allow",
+        "bash": {
+          "*": "allow"
+        },
+        "task": {
+          "*": "allow"
+        }
+      },
+      "prompt": "You are Atlas. Execute todo-driven plans with strict sequencing, checkpoint validation, and clear rollback notes."
+    },
+    "hephaestus": {
+      "description": "Primary deep autonomous builder focused on end-to-end implementation quality.",
+      "mode": "primary",
+      "color": "warning",
+      "steps": 100,
+      "permission": {
+        "edit": "allow",
+        "webfetch": "allow",
+        "bash": {
+          "*": "allow"
+        },
+        "task": {
+          "*": "allow"
+        }
+      },
+      "prompt": "You are Hephaestus. Build thoroughly: inspect patterns, implement with high confidence, verify with tests/checks, and avoid premature completion."
+    },
+    "plan": {
+      "description": "Primary planning agent for analysis and architecture decisions without direct code edits.",
+      "mode": "primary",
+      "color": "info",
+      "steps": 40,
+      "permission": {
+        "edit": "deny",
+        "webfetch": "allow",
+        "bash": {
+          "*": "ask",
+          "git status*": "allow",
+          "git diff*": "allow",
+          "git log*": "allow"
+        },
+        "task": {
+          "*": "allow"
+        }
+      },
+      "prompt": "You are the Plan agent. Produce implementation-ready plans with risk analysis, test strategy, acceptance criteria, and rollback notes."
+    },
+    "safe": {
+      "description": "Primary controlled builder for cautious execution with approval gates on shell operations.",
+      "mode": "primary",
+      "color": "warning",
+      "permission": {
+        "edit": "allow",
+        "webfetch": "ask",
+        "bash": {
+          "*": "ask",
+          "git status*": "allow",
+          "git diff*": "allow",
+          "npm test*": "allow",
+          "pnpm test*": "allow",
+          "bun test*": "allow"
+        },
+        "task": {
+          "*": "allow"
+        }
+      },
+      "prompt": "You are the Safe agent. Make careful changes with a validation-first workflow and explicit risk callouts."
+    },
+    "prometheus": {
+      "description": "Subagent for strategic planning and interview-style requirement clarification.",
+      "mode": "subagent",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "apply_patch": false
+      },
+      "prompt": "You are Prometheus. Build strategic plans with milestones, dependencies, measurable acceptance criteria, and open questions."
+    },
+    "oracle": {
+      "description": "Subagent for architecture decisions, hard debugging, and deep tradeoff analysis.",
+      "mode": "subagent",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "apply_patch": false,
+        "task": false
+      },
+      "prompt": "You are Oracle. Provide high-signal technical guidance with one primary recommendation, concrete action plan, and risks."
+    },
+    "librarian": {
+      "description": "Subagent for documentation lookup, OSS implementation search, and evidence-based references.",
+      "mode": "subagent",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "apply_patch": false,
+        "task": false
+      },
+      "prompt": "You are Librarian. Resolve docs first, gather authoritative sources, and return evidence-backed implementation guidance with concrete links."
+    },
+    "explore": {
+      "description": "Subagent for fast codebase exploration and pattern discovery.",
+      "mode": "subagent",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "apply_patch": false,
+        "task": false
+      },
+      "prompt": "You are Explore. Run parallel searches, return absolute paths, and provide actionable findings quickly."
+    },
+    "metis": {
+      "description": "Subagent for pre-planning consultation and ambiguity detection.",
+      "mode": "subagent",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "apply_patch": false
+      },
+      "prompt": "You are Metis. Classify intent, identify hidden requirements, and produce directives that prevent scope drift and implementation failure."
+    },
+    "momus": {
+      "description": "Subagent for practical plan review focused on blocking issues only.",
+      "mode": "subagent",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "apply_patch": false
+      },
+      "prompt": "You are Momus. Review plans for executability, missing references, and blockers. Approve by default unless true blockers exist."
+    },
+    "multimodal-looker": {
+      "description": "Subagent for image and PDF understanding tasks.",
+      "mode": "subagent",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "apply_patch": false
+      },
+      "prompt": "You are Multimodal Looker. Extract accurate information from images and PDFs, summarize findings, and map them to implementation needs."
+    },
+    "frontend": {
+      "description": "Subagent for UI implementation, accessibility, and interaction quality.",
+      "mode": "subagent",
+      "prompt": "You are a frontend engineering specialist. Build robust, accessible UI with clear states, responsive behavior, and consistent styling."
+    },
+    "backend": {
+      "description": "Subagent for API, service-layer, and data-flow implementation.",
+      "mode": "subagent",
+      "prompt": "You are a backend engineering specialist. Prioritize correctness, reliability, and clear contracts across service boundaries."
+    },
+    "devops": {
+      "description": "Subagent for CI/CD, containerization, and deployment safety.",
+      "mode": "subagent",
+      "prompt": "You are a DevOps specialist. Improve build, deploy, and operational safety with low-risk automation."
+    },
+    "quick": {
+      "description": "Subagent for fast low-cost iteration and lightweight implementation.",
+      "mode": "subagent",
+      "steps": 16,
+      "temperature": 0.2,
+      "prompt": "You are the Quick agent. Optimize for speed and low context usage while staying correct."
+    },
+    "deep": {
+      "description": "Subagent for deep analysis, architecture, and high-confidence solutions.",
+      "mode": "subagent",
+      "steps": 50,
+      "temperature": 0.1,
+      "prompt": "You are the Deep agent. Think thoroughly, map tradeoffs, identify risks, and produce robust implementation guidance."
+    },
+    "visual-engineering": {
+      "description": "Subagent for frontend visual quality, UX flow, and polish.",
+      "mode": "subagent",
+      "steps": 24,
+      "temperature": 0.35,
+      "prompt": "You are the Visual Engineering agent. Focus on hierarchy, spacing, accessibility, and memorable UI composition."
+    },
+    "writing": {
+      "description": "Subagent for docs, changelogs, and technical writing.",
+      "mode": "subagent",
+      "steps": 24,
+      "temperature": 0.3,
+      "tools": {
+        "bash": false
+      },
+      "prompt": "You are the Writing agent. Produce concise, accurate, and practical technical writing."
+    },
+    "reviewer": {
+      "description": "Subagent for code quality, maintainability, and risk-focused reviews.",
+      "mode": "subagent",
+      "tools": {
+        "write": false,
+        "edit": false
+      },
+      "prompt": "You are a strict code reviewer. Prioritize correctness, security, maintainability, and clear remediation guidance."
+    },
+    "tester": {
+      "description": "Subagent for writing, improving, and validating tests.",
+      "mode": "subagent",
+      "prompt": "You are a testing specialist. Improve confidence quickly with focused, deterministic tests and clear failure analysis."
+    },
+    "security": {
+      "description": "Subagent for application and dependency security checks.",
+      "mode": "subagent",
+      "tools": {
+        "write": false,
+        "edit": false
+      },
+      "prompt": "You are a security auditor. Identify vulnerabilities, sensitive data risks, auth flaws, and unsafe defaults."
+    },
+    "docs": {
+      "description": "Subagent for documentation quality and developer onboarding content.",
+      "mode": "subagent",
+      "prompt": "You are a docs specialist. Produce concise, accurate, and task-oriented documentation for developers."
+    },
+    "release": {
+      "description": "Subagent for release preparation, notes, and rollout checklists.",
+      "mode": "subagent",
+      "prompt": "You are a release manager. Prepare low-risk release plans, changelogs, and rollback guidance."
+    },
+    "incident": {
+      "description": "Subagent for incident triage, containment, and postmortem-ready findings.",
+      "mode": "subagent",
+      "prompt": "You are an incident response specialist. Prioritize impact containment, root-cause isolation, and actionable next steps."
+    }
+  }
+}

@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+out_dir="${1:-$HOME/Pictures/opencode-clips}"
+mkdir -p "$out_dir"
+ts="$(date +%Y%m%d-%H%M%S)"
+out_file="$out_dir/clip-$ts.png"
+
+if command -v wl-paste >/dev/null 2>&1; then
+  mime="$(wl-paste --list-types 2>/dev/null || true)"
+  if printf '%s' "$mime" | grep -Eq 'image/(png|jpeg|webp|bmp)'; then
+    wl-paste --no-newline --type image/png >"$out_file"
+    printf '%s\n' "$out_file"
+    exit 0
+  fi
+fi
+
+if command -v xclip >/dev/null 2>&1; then
+  if xclip -selection clipboard -t TARGETS -o 2>/dev/null | grep -Eq 'image/(png|jpeg|bmp)'; then
+    xclip -selection clipboard -t image/png -o >"$out_file"
+    printf '%s\n' "$out_file"
+    exit 0
+  fi
+fi
+
+if command -v xsel >/dev/null 2>&1; then
+  if xsel --clipboard --output --target TARGETS 2>/dev/null | grep -Eq 'image/(png|jpeg|bmp)'; then
+    xsel --clipboard --output --target image/png >"$out_file"
+    printf '%s\n' "$out_file"
+    exit 0
+  fi
+fi
+
+printf "Clipboard'da resim bulunamadi.\n" >&2
+printf 'Wayland icin: sudo apt install wl-clipboard\n' >&2
+printf 'X11 icin: sudo apt install xclip\n' >&2
+exit 1

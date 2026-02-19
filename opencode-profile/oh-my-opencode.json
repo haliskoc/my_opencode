@@ -1,0 +1,131 @@
+{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json",
+  "new_task_system_enabled": true,
+  "default_run_agent": "sisyphus",
+  "ralph_loop": {
+    "enabled": true,
+    "default_max_iterations": 120
+  },
+  "background_task": {
+    "defaultConcurrency": 4,
+    "providerConcurrency": {
+      "openai": 3,
+      "anthropic": 3,
+      "google": 3,
+      "github-copilot": 2
+    },
+    "modelConcurrency": {
+      "openai/gpt-5.3-codex": 2,
+      "openai/gpt-5.2": 2,
+      "anthropic/claude-opus-4-6": 2,
+      "google/gemini-3-pro": 2
+    },
+    "staleTimeoutMs": 300000,
+    "messageStalenessTimeoutMs": 240000
+  },
+  "categories": {
+    "visual-engineering": {
+      "description": "UI, UX, visual polish, accessibility",
+      "model": "google/gemini-3-pro",
+      "temperature": 0.35,
+      "reasoningEffort": "high"
+    },
+    "ultrabrain": {
+      "description": "Hard architecture and deep reasoning",
+      "model": "openai/gpt-5.3-codex",
+      "reasoningEffort": "xhigh",
+      "textVerbosity": "medium"
+    },
+    "deep": {
+      "description": "Thorough implementation and analysis",
+      "model": "openai/gpt-5.3-codex",
+      "reasoningEffort": "high",
+      "textVerbosity": "medium"
+    },
+    "quick": {
+      "description": "Fast, low-cost small tasks",
+      "model": "opencode/gpt-5-nano",
+      "reasoningEffort": "low",
+      "textVerbosity": "low"
+    },
+    "writing": {
+      "description": "Documentation and technical writing",
+      "model": "kimi-for-coding/k2p5",
+      "textVerbosity": "high"
+    }
+  },
+  "agents": {
+    "sisyphus": {
+      "model": "openai/gpt-5.3-codex",
+      "prompt_append": "Prioritize ultrawork behavior: parallel exploration, strict todo continuity, and completion-first execution."
+    },
+    "oracle": {
+      "model": "openai/gpt-5.2",
+      "prompt_append": "Focus on one primary recommendation with concrete execution steps and risk-aware tradeoffs."
+    },
+    "librarian": {
+      "model": "google/gemini-3-flash",
+      "prompt_append": "Always include evidence-based references and code/documentation links."
+    },
+    "explore": {
+      "model": "openai/gpt-5-nano",
+      "prompt_append": "Run parallel searches and return absolute paths with direct findings."
+    },
+    "prometheus": {
+      "model": "openai/gpt-5.3-codex",
+      "prompt_append": "Generate implementation-ready plans with explicit acceptance criteria and rollback plan."
+    },
+    "metis": {
+      "model": "openai/gpt-5.2",
+      "prompt_append": "Classify user intent first, detect ambiguity, and provide guardrails before planning."
+    },
+    "momus": {
+      "model": "openai/gpt-5.2",
+      "prompt_append": "Review plans for blockers only. Approve by default unless a hard blocker exists."
+    },
+    "atlas": {
+      "model": "openai/gpt-5.3-codex",
+      "prompt_append": "Coordinate execution from plan checkpoints and keep todo status synchronized."
+    },
+    "hephaestus": {
+      "model": "openai/gpt-5.3-codex",
+      "variant": "medium",
+      "reasoningEffort": "high",
+      "prompt_append": "Work autonomously end-to-end, avoid premature stopping, and validate after changes."
+    },
+    "multimodal-looker": {
+      "model": "google/gemini-3-flash"
+    }
+  },
+  "browser_automation_engine": {
+    "provider": "playwright"
+  },
+  "git_master": {
+    "commit_footer": true,
+    "include_co_authored_by": false
+  },
+  "websearch": {
+    "provider": "exa"
+  },
+  "claude_code": {
+    "mcp": true,
+    "commands": true,
+    "skills": true,
+    "agents": true,
+    "hooks": true,
+    "plugins": true
+  },
+  "tmux": {
+    "enabled": false,
+    "layout": "main-vertical",
+    "main_pane_size": 60,
+    "main_pane_min_width": 120,
+    "agent_pane_min_width": 40
+  },
+  "experimental": {
+    "aggressive_truncation": true,
+    "auto_resume": true,
+    "preemptive_compaction": true,
+    "truncate_all_tool_outputs": true
+  }
+}
