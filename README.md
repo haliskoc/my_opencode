@@ -27,13 +27,19 @@ If users already cloned this repo:
 ./install.sh
 ```
 
-If you publish this repo, users can install with one command:
+Direct one-command install from this repository:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<your-org>/<your-repo>/main/install.sh | bash -s -- --repo https://github.com/<your-org>/<your-repo>.git
+curl -fsSL https://raw.githubusercontent.com/haliskoc/my_opencode/main/install.sh | bash -s -- --repo https://github.com/haliskoc/my_opencode.git
 ```
 
-After install, they can launch with:
+Step-by-step:
+
+1. Run the install command above.
+2. Open a new terminal (or run `export PATH="$HOME/.local/bin:$PATH"`).
+3. Start with `opencode-super`.
+
+After install, launch with:
 
 ```bash
 opencode-super
