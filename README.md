@@ -1,104 +1,133 @@
 # OpenCode Super Assistant Docker
 
-This image ships OpenCode with a preloaded profile:
+## Turkish
 
-- NPM plugin enabled: `oh-my-opencode`
-- Core primary agents: `full`, `sisyphus`, `atlas`, `hephaestus`, `plan`, `safe`
-- Specialized subagents: `prometheus`, `oracle`, `librarian`, `explore`, `metis`, `momus`, `multimodal-looker`, `frontend`, `backend`, `devops`, `reviewer`, `tester`, `security`, `docs`, `release`, `incident`
-- Category subagents: `quick`, `deep`, `visual-engineering`, `writing`
-- Default MCP servers: `context7`, `gh_grep`, `websearch`
-- Skill library: popular engineering skills + extracted oh-my style skills (`git-master`, `playwright`, `frontend-ui-ux`, `agent-browser`, `dev-browser`)
-- Industry profile skills: `profile-saas`, `profile-ecommerce`, `profile-fintech`, `profile-game-backend`
-- Custom commands: `/agents`, `/skills`, `/profiles`, `/use-profile <name>`, `/quick`, `/deep`, `/visual`, `/writing`, `/ulw`, `/init-deep`, `/ralph-loop`, `/ulw-loop`, `/cancel-ralph`, `/refactor`, `/start-work`, `/stop-continuation`, `/categories`, `/route-task`
-- Clipboard image helper: `opencode-clipimg` + `/clip-image`
-- Reference source included in image: `/opt/oh-my-opencode-source`
+### Nedir?
 
-## Build
+Bu repo, OpenCode'u Docker icinde hazir profil ile calistirir:
 
-```bash
-docker build -t opencode-super .
-```
+- `oh-my-opencode` plugin aktif
+- Primary agentler: `full`, `sisyphus`, `atlas`, `hephaestus`, `plan`, `safe`
+- Zengin subagent seti: `prometheus`, `oracle`, `librarian`, `explore`, `metis`, `momus`, `multimodal-looker`, `frontend`, `backend`, `devops`, `reviewer`, `tester`, `security`, `docs`, `release`, `incident`
+- Kategori ajanlari: `quick`, `deep`, `visual-engineering`, `writing`
+- MCP varsayilanlari: `context7`, `gh_grep`, `websearch`
+- Skill kutuphanesi + sektor profilleri (`profile-saas`, `profile-ecommerce`, `profile-fintech`, `profile-game-backend`)
+- Ozel komutlar: `/ulw`, `/refactor`, `/route-task`, `/profiles`, `/clip-image` ve daha fazlasi
 
-## One-command install
+### Tek komut kurulum (dosya indirmeden)
 
-If users already cloned this repo:
+Asagidaki komut tek seferde:
 
-```bash
-./install.sh
-```
-
-Direct one-command install from this repository:
+- repoyu alir
+- Docker yoksa (Ubuntu/Debian) kurar
+- hostta `opencode` yoksa npm ile kurmayi dener
+- image build eder
+- `opencode-super` launcher olusturur
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/haliskoc/my_opencode/main/install.sh | bash -s -- --repo https://github.com/haliskoc/my_opencode.git
+curl -fsSL https://raw.githubusercontent.com/haliskoc/my_opencode/main/install.sh | bash
 ```
 
-Step-by-step:
-
-1. Run the install command above.
-2. Open a new terminal (or run `export PATH="$HOME/.local/bin:$PATH"`).
-3. Start with `opencode-super`.
-
-After install, launch with:
+Kurulumdan sonra:
 
 ```bash
 opencode-super
 ```
 
-## Run
+Eger komut bulunamazsa:
 
 ```bash
-docker run -it --rm \
-  -v "$(pwd)":/workspace \
-  opencode-super
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-## Run with Docker Compose
+### Opsiyonel API key gecisi
 
 ```bash
-docker compose up --build opencode
+export OPENAI_API_KEY="your_key"
+export CONTEXT7_API_KEY="your_key"
+export EXA_API_KEY="your_key"
+opencode-super
 ```
 
-## Optional persistent auth and history
+### Dogrulama
 
-```bash
-docker run -it --rm \
-  -v "$(pwd)":/workspace \
-  -v "$HOME/.local/share/opencode":/root/.local/share/opencode \
-  opencode-super
-```
-
-## Optional provider keys
-
-```bash
-docker run -it --rm \
-  -v "$(pwd)":/workspace \
-  -e OPENAI_API_KEY="your_key" \
-  -e CONTEXT7_API_KEY="your_key" \
-  -e EXA_API_KEY="your_key" \
-  opencode-super
-```
-
-## Verify profile inside container
-
-Run these in OpenCode:
+OpenCode icinde:
 
 - `/agents`
 - `/skills`
+- `/profiles`
 
-And from shell:
+Shell icinde:
 
 ```bash
 opencode mcp list
 ```
 
-## Expected defaults
+Beklenen: `context7`, `gh_grep`, `websearch`
 
-- Primary agent tabs include `full`, `plan`, and `safe`
-- `/agents` lists extended subagents including `oracle`, `librarian`, `metis`, `momus`, and `multimodal-looker`
-- `/skills` lists the extended skill catalog
-- `/profiles` lists industry personas
-- `/use-profile profile-saas` applies a persona to current task style
-- `/ulw` triggers ultrawork-style orchestration with todo-first completion discipline
-- `/clip-image` saves clipboard image and injects file path into context
-- `opencode mcp list` shows `context7`, `gh_grep`, and `websearch`
+---
+
+## English
+
+### What is this?
+
+This repo runs OpenCode inside Docker with a preloaded super profile:
+
+- `oh-my-opencode` plugin enabled
+- Primary agents: `full`, `sisyphus`, `atlas`, `hephaestus`, `plan`, `safe`
+- Rich subagent set: `prometheus`, `oracle`, `librarian`, `explore`, `metis`, `momus`, `multimodal-looker`, `frontend`, `backend`, `devops`, `reviewer`, `tester`, `security`, `docs`, `release`, `incident`
+- Category agents: `quick`, `deep`, `visual-engineering`, `writing`
+- Default MCP servers: `context7`, `gh_grep`, `websearch`
+- Skill library + industry profiles (`profile-saas`, `profile-ecommerce`, `profile-fintech`, `profile-game-backend`)
+- Custom commands: `/ulw`, `/refactor`, `/route-task`, `/profiles`, `/clip-image`, and more
+
+### One-command install (no manual file download)
+
+This command will:
+
+- clone the repo
+- install Docker automatically on Ubuntu/Debian if missing
+- attempt host `opencode` install via npm if missing
+- build the Docker image
+- create the `opencode-super` launcher
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/haliskoc/my_opencode/main/install.sh | bash
+```
+
+Then run:
+
+```bash
+opencode-super
+```
+
+If command is not found:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+### Optional provider keys
+
+```bash
+export OPENAI_API_KEY="your_key"
+export CONTEXT7_API_KEY="your_key"
+export EXA_API_KEY="your_key"
+opencode-super
+```
+
+### Verify
+
+Inside OpenCode:
+
+- `/agents`
+- `/skills`
+- `/profiles`
+
+From shell:
+
+```bash
+opencode mcp list
+```
+
+Expected MCPs: `context7`, `gh_grep`, `websearch`
