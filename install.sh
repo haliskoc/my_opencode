@@ -277,13 +277,16 @@ if [[ "${1:-}" == "--self-update" || "${1:-}" == "self-update" ]]; then
   exit 0
 fi
 
+RUNTIME_UID="${OPENCODE_SUPER_UID:-$(id -u)}"
+RUNTIME_GID="${OPENCODE_SUPER_GID:-$(id -g)}"
+
 EXTRA_SECURITY_FLAGS=()
 if [[ "${OPENCODE_SUPER_UNSAFE:-0}" != "1" ]]; then
   EXTRA_SECURITY_FLAGS=(
     --read-only
     --tmpfs /tmp:rw,noexec,nosuid,size=256m,mode=1777
-    --tmpfs /home/opencode/.cache:rw,noexec,nosuid,size=256m,uid=10001,gid=10001,mode=0755
-    --tmpfs /home/opencode/.local/state:rw,noexec,nosuid,size=128m,uid=10001,gid=10001,mode=0755
+    --tmpfs /home/opencode/.cache:rw,noexec,nosuid,size=256m,uid=${RUNTIME_UID},gid=${RUNTIME_GID},mode=0755
+    --tmpfs /home/opencode/.local/state:rw,noexec,nosuid,size=128m,uid=${RUNTIME_UID},gid=${RUNTIME_GID},mode=0755
     --security-opt no-new-privileges:true
     --cap-drop ALL
     --pids-limit 512
@@ -291,6 +294,7 @@ if [[ "${OPENCODE_SUPER_UNSAFE:-0}" != "1" ]]; then
 fi
 
 ${DOCKER_BIN} run -it --rm "${EXTRA_SECURITY_FLAGS[@]}" \
+  --user "${RUNTIME_UID}:${RUNTIME_GID}" \
   -v "${PWD}:/workspace" \
   -v "${HOME}/.local/share/opencode:/home/opencode/.local/share/opencode" \
   -e OPENAI_API_KEY="${OPENAI_API_KEY:-}" \

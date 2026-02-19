@@ -57,6 +57,12 @@ Gecici kapatmak icin:
 OPENCODE_SUPER_UNSAFE=1 opencode-super
 ```
 
+Eger `EACCES` izin hatasi gorurseniz, launcher'i kendi UID/GID ile calistirin:
+
+```bash
+OPENCODE_SUPER_UID=$(id -u) OPENCODE_SUPER_GID=$(id -g) opencode-super
+```
+
 Eger komut bulunamazsa:
 
 ```bash
@@ -145,6 +151,12 @@ To temporarily disable:
 
 ```bash
 OPENCODE_SUPER_UNSAFE=1 opencode-super
+```
+
+If you get an `EACCES` permission error, run with your UID/GID:
+
+```bash
+OPENCODE_SUPER_UID=$(id -u) OPENCODE_SUPER_GID=$(id -g) opencode-super
 ```
 
 If command is not found:
