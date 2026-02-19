@@ -12,7 +12,9 @@ Bu repo, OpenCode'u Docker icinde hazir profil ile calistirir:
 - Kategori ajanlari: `quick`, `deep`, `visual-engineering`, `writing`
 - MCP varsayilanlari: `context7`, `gh_grep`, `websearch`
 - Skill kutuphanesi + sektor profilleri (`profile-saas`, `profile-ecommerce`, `profile-fintech`, `profile-game-backend`)
-- Ozel komutlar: `/ulw`, `/refactor`, `/route-task`, `/profiles`, `/clip-image` ve daha fazlasi
+- Ozel komutlar: `/ulw`, `/refactor`, `/route-task`, `/profiles`, `/clip-image`, `/doctor`, `/ship` ve daha fazlasi
+- CI/CD ve guvenlik workflow'lari: `.github/workflows/`
+- Surum dosyasi: `VERSION` (deterministik image etiketi icin)
 
 ### Tek komut kurulum (dosya indirmeden)
 
@@ -32,6 +34,13 @@ Kurulumdan sonra:
 
 ```bash
 opencode-super
+```
+
+Ek launcher komutlari:
+
+```bash
+opencode-super --version
+opencode-super --self-update
 ```
 
 Eger komut bulunamazsa:
@@ -79,7 +88,9 @@ This repo runs OpenCode inside Docker with a preloaded super profile:
 - Category agents: `quick`, `deep`, `visual-engineering`, `writing`
 - Default MCP servers: `context7`, `gh_grep`, `websearch`
 - Skill library + industry profiles (`profile-saas`, `profile-ecommerce`, `profile-fintech`, `profile-game-backend`)
-- Custom commands: `/ulw`, `/refactor`, `/route-task`, `/profiles`, `/clip-image`, and more
+- Custom commands: `/ulw`, `/refactor`, `/route-task`, `/profiles`, `/clip-image`, `/doctor`, `/ship`, and more
+- CI/CD and security workflows: `.github/workflows/`
+- Version file: `VERSION` (for deterministic image tags)
 
 ### One-command install (no manual file download)
 
@@ -99,6 +110,13 @@ Then run:
 
 ```bash
 opencode-super
+```
+
+Launcher extras:
+
+```bash
+opencode-super --version
+opencode-super --self-update
 ```
 
 If command is not found:

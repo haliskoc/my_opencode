@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate install script syntax
+        run: bash -n install.sh
+
+      - name: Validate JSON config files
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('opencode-profile/opencode.json','utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('opencode-profile/oh-my-opencode.json','utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('opencode-profile/package.json','utf8'))"
+
+      - name: Validate profile lockfile
+        run: npm --prefix opencode-profile ci --omit=dev
+
+      - name: Build Docker image
+        run: docker build -t opencode-super:ci .

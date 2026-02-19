@@ -19,5 +19,6 @@ Categories:
 - Workflow automation
 - Browser automation
 - Frontend design direction
+- Diagnostics and release workflows
 
 If the user provides a goal, map the goal to the best skill and explain why in one sentence.

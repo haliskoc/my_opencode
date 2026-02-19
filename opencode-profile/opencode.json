@@ -3,7 +3,8 @@
   "default_agent": "full",
   "autoupdate": "notify",
   "plugin": [
-    "oh-my-opencode"
+    "oh-my-opencode",
+    "oh-my-local"
   ],
   "mcp": {
     "context7": {
