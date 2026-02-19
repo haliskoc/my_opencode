@@ -15,6 +15,7 @@ Bu repo, OpenCode'u Docker icinde hazir profil ile calistirir:
 - Ozel komutlar: `/ulw`, `/refactor`, `/route-task`, `/profiles`, `/clip-image`, `/doctor`, `/ship` ve daha fazlasi
 - CI/CD ve guvenlik workflow'lari: `.github/workflows/`
 - Surum dosyasi: `VERSION` (deterministik image etiketi icin)
+- Semver otomasyonu: `release-please` + `CHANGELOG.md`
 
 ### Tek komut kurulum (dosya indirmeden)
 
@@ -30,6 +31,12 @@ Asagidaki komut tek seferde:
 curl -fsSL https://raw.githubusercontent.com/haliskoc/my_opencode/main/install.sh | bash
 ```
 
+Sabit surum (onerilen):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/haliskoc/my_opencode/v1.0.0/install.sh | bash -s -- --ref v1.0.0 --version 1.0.0
+```
+
 Kurulumdan sonra:
 
 ```bash
@@ -41,6 +48,13 @@ Ek launcher komutlari:
 ```bash
 opencode-super --version
 opencode-super --self-update
+```
+
+Not: Varsayilan guvenlik modu hardened calisir (`read-only`, `cap-drop`, `no-new-privileges`).
+Gecici kapatmak icin:
+
+```bash
+OPENCODE_SUPER_UNSAFE=1 opencode-super
 ```
 
 Eger komut bulunamazsa:
@@ -91,6 +105,7 @@ This repo runs OpenCode inside Docker with a preloaded super profile:
 - Custom commands: `/ulw`, `/refactor`, `/route-task`, `/profiles`, `/clip-image`, `/doctor`, `/ship`, and more
 - CI/CD and security workflows: `.github/workflows/`
 - Version file: `VERSION` (for deterministic image tags)
+- Semver automation: `release-please` + `CHANGELOG.md`
 
 ### One-command install (no manual file download)
 
@@ -106,6 +121,12 @@ This command will:
 curl -fsSL https://raw.githubusercontent.com/haliskoc/my_opencode/main/install.sh | bash
 ```
 
+Pinned version (recommended):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/haliskoc/my_opencode/v1.0.0/install.sh | bash -s -- --ref v1.0.0 --version 1.0.0
+```
+
 Then run:
 
 ```bash
@@ -117,6 +138,13 @@ Launcher extras:
 ```bash
 opencode-super --version
 opencode-super --self-update
+```
+
+Note: Hardened runtime is enabled by default (`read-only`, `cap-drop`, `no-new-privileges`).
+To temporarily disable:
+
+```bash
+OPENCODE_SUPER_UNSAFE=1 opencode-super
 ```
 
 If command is not found:

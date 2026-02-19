@@ -31,7 +31,8 @@ jobs:
         with:
           image-ref: opencode-super:security
           format: table
-          exit-code: '0'
+          exit-code: '1'
+          severity: HIGH,CRITICAL
           ignore-unfixed: true
           vuln-type: os,library
 

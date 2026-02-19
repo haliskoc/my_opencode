@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_URL_DEFAULT="https://github.com/haliskoc/my_opencode.git"
-INSTALL_URL="https://raw.githubusercontent.com/haliskoc/my_opencode/main/install.sh"
+INSTALL_REF="main"
 INSTALL_BIN_DIR="${HOME}/.local/bin"
 LAUNCHER_PATH="${INSTALL_BIN_DIR}/opencode-super"
 WORK_ROOT="${HOME}/.local/share/opencode-super"
@@ -41,12 +41,14 @@ Options:
   --repo                  Repository URL to clone if --source is not provided
   --no-install-docker     Do not auto-install Docker when missing
   --skip-host-opencode    Do not install host opencode CLI
+  --ref <git-ref>         Git branch/tag/commit-ish to install from (default: main)
   --version <x.y.z>       Override version tag for image/launcher
 
 Examples:
   ./install.sh
   ./install.sh --source /home/user/my_opencode
   ./install.sh --repo ${REPO_URL_DEFAULT}
+  ./install.sh --ref v1.0.0 --version 1.0.0
 EOF
 }
 
@@ -156,6 +158,10 @@ resolve_version() {
   fi
 }
 
+build_install_url() {
+  printf 'https://raw.githubusercontent.com/haliskoc/my_opencode/%s/install.sh' "${INSTALL_REF}"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --source)
@@ -173,6 +179,10 @@ while [[ $# -gt 0 ]]; do
     --skip-host-opencode)
       INSTALL_HOST_OPENCODE_IF_MISSING="false"
       shift
+      ;;
+    --ref)
+      INSTALL_REF="$2"
+      shift 2
       ;;
     --version)
       APP_VERSION="$2"
@@ -226,13 +236,14 @@ if [[ -z "${SOURCE_DIR}" ]]; then
   mkdir -p "${WORK_ROOT}"
   SOURCE_DIR="${WORK_ROOT}/repo"
   rm -rf "${SOURCE_DIR}"
-  git clone --depth 1 "${REPO_URL}" "${SOURCE_DIR}"
+  git clone --depth 1 --branch "${INSTALL_REF}" "${REPO_URL}" "${SOURCE_DIR}"
 fi
 
 [[ -f "${SOURCE_DIR}/Dockerfile" ]] || die "Dockerfile not found at: ${SOURCE_DIR}"
 
 resolve_version
 IMAGE_TAG="opencode-super:${APP_VERSION}"
+INSTALL_URL="$(build_install_url)"
 
 log "Building image: ${IMAGE_TAG}"
 docker_cmd build -t "${IMAGE_TAG}" -t opencode-super:latest "${SOURCE_DIR}"
@@ -266,7 +277,20 @@ if [[ "${1:-}" == "--self-update" || "${1:-}" == "self-update" ]]; then
   exit 0
 fi
 
-${DOCKER_BIN} run -it --rm \
+EXTRA_SECURITY_FLAGS=()
+if [[ "${OPENCODE_SUPER_UNSAFE:-0}" != "1" ]]; then
+  EXTRA_SECURITY_FLAGS=(
+    --read-only
+    --tmpfs /tmp:rw,noexec,nosuid,size=256m,mode=1777
+    --tmpfs /home/opencode/.cache:rw,noexec,nosuid,size=256m,uid=10001,gid=10001,mode=0755
+    --tmpfs /home/opencode/.local/state:rw,noexec,nosuid,size=128m,uid=10001,gid=10001,mode=0755
+    --security-opt no-new-privileges:true
+    --cap-drop ALL
+    --pids-limit 512
+  )
+fi
+
+${DOCKER_BIN} run -it --rm "${EXTRA_SECURITY_FLAGS[@]}" \
   -v "${PWD}:/workspace" \
   -v "${HOME}/.local/share/opencode:/home/opencode/.local/share/opencode" \
   -e OPENAI_API_KEY="${OPENAI_API_KEY:-}" \
