@@ -280,9 +280,12 @@ prepare_source() {
   fi
 
   # Check if script is running from the repo directory
+  # NOTE: BASH_SOURCE is unbound when piped from curl, so use default empty
   if [[ -z "${SOURCE_DIR}" ]]; then
-    local script_dir
-    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "")"
+    local script_dir=""
+    if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
+      script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "")"
+    fi
     if [[ -n "${script_dir}" && -d "${script_dir}/opencode-profile" ]]; then
       SOURCE_DIR="${script_dir}"
       log "Using script directory: ${SOURCE_DIR}"
