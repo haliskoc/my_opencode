@@ -62,7 +62,7 @@
     },
     "plan": {
       "model": "openai/gpt-5.3-codex",
-      "reasoningEffort": "xhigh",
+      "reasoningEffort": "medium",
       "prompt_append": "Think deeply before planning. Explore the full codebase first, identify hidden dependencies, produce plans with exact file paths and function names. Always include: Problem Analysis, Impact Analysis, 2+ Architecture Alternatives, Step-by-Step Implementation Roadmap, Risk Assessment, Acceptance Criteria, and Rollback Plan. Never be vague."
     },
     "sisyphus": {
