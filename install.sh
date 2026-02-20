@@ -1,60 +1,107 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ============================================================================
+# OpenCode Super Assistant — Profile Installer
+# ============================================================================
+# This script:
+#   1. Checks if OpenCode CLI is installed
+#   2. If installed → resets profile to clean state (backup first)
+#   3. If not installed → installs OpenCode CLI via npm
+#   4. Copies the super profile (skills, commands, agents, plugins) into
+#      ~/.config/opencode/
+#   5. Installs profile npm dependencies (oh-my-opencode, plugin SDK)
+#
+# One-line install:
+#   curl -fsSL https://raw.githubusercontent.com/haliskoc/my_opencode/main/install.sh | bash
+# ============================================================================
+
 REPO_URL_DEFAULT="https://github.com/haliskoc/my_opencode.git"
 INSTALL_REF="main"
-INSTALL_BIN_DIR="${HOME}/.local/bin"
-LAUNCHER_PATH="${INSTALL_BIN_DIR}/opencode-super"
-WORK_ROOT="${HOME}/.local/share/opencode-super"
+OPENCODE_CONFIG_DIR="${HOME}/.config/opencode"
+OPENCODE_DATA_DIR="${HOME}/.local/share/opencode"
+OPENCODE_STATE_DIR="${HOME}/.local/state/opencode"
+WORK_DIR=""
 
 SOURCE_DIR=""
 REPO_URL="${REPO_URL_DEFAULT}"
-INSTALL_DOCKER_IF_MISSING="true"
-INSTALL_HOST_OPENCODE_IF_MISSING="true"
-APP_VERSION=""
-IMAGE_TAG=""
+FORCE_RESET="false"
+SKIP_RESET="false"
+SKIP_OPENCODE_INSTALL="false"
 LOG_FILE=""
 
+# --- Colors ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
 log() {
-  printf '%s\n' "$*"
+  printf "${GREEN}[✓]${NC} %s\n" "$*"
+}
+
+info() {
+  printf "${BLUE}[i]${NC} %s\n" "$*"
 }
 
 warn() {
-  printf 'WARN: %s\n' "$*" >&2
+  printf "${YELLOW}[!]${NC} %s\n" "$*" >&2
 }
 
 die() {
-  printf 'ERROR: %s\n' "$*" >&2
+  printf "${RED}[✗]${NC} %s\n" "$*" >&2
   if [[ -n "${LOG_FILE}" ]]; then
-    printf 'Log file: %s\n' "${LOG_FILE}" >&2
+    printf "${RED}[✗]${NC} Log file: %s\n" "${LOG_FILE}" >&2
+  fi
+  # Clean up temp dir
+  if [[ -n "${WORK_DIR}" && -d "${WORK_DIR}" ]]; then
+    rm -rf "${WORK_DIR}"
   fi
   exit 1
 }
 
+header() {
+  printf "\n${BOLD}${CYAN}━━━ %s ━━━${NC}\n\n" "$*"
+}
+
 usage() {
   cat <<EOF
+${BOLD}OpenCode Super Assistant — Profile Installer${NC}
+
 Usage:
-  ./install.sh [--source /path/to/repo] [--repo ${REPO_URL_DEFAULT}]
+  ./install.sh [options]
+  curl -fsSL https://raw.githubusercontent.com/haliskoc/my_opencode/main/install.sh | bash
 
 Options:
-  --source                Local directory containing Dockerfile and profile
-  --repo                  Repository URL to clone if --source is not provided
-  --no-install-docker     Do not auto-install Docker when missing
-  --skip-host-opencode    Do not install host opencode CLI
-  --ref <git-ref>         Git branch/tag/commit-ish to install from (default: main)
-  --version <x.y.z>       Override version tag for image/launcher
+  --source <path>         Local directory containing opencode-profile
+  --repo <url>            Repository URL to clone (default: ${REPO_URL_DEFAULT})
+  --ref <git-ref>         Git branch/tag/commit to install from (default: main)
+  --reset                 Force reset existing profile before install
+  --no-reset              Skip reset even if existing profile detected
+  --skip-opencode         Do not install OpenCode CLI (profile only)
+  -h, --help              Show this help
+
+What it does:
+  1. Detects existing OpenCode installation
+  2. Resets profile if found (backs up first) or installs fresh
+  3. Installs OpenCode CLI via npm if not found
+  4. Copies super profile with 46 skills, 36 commands, 26 agents
+  5. Installs profile dependencies (oh-my-opencode plugin)
 
 Examples:
   ./install.sh
-  ./install.sh --source /home/user/my_opencode
-  ./install.sh --repo ${REPO_URL_DEFAULT}
-  ./install.sh --ref v1.0.0 --version 1.0.0
+  ./install.sh --reset
+  ./install.sh --source /path/to/my_opencode
+  curl -fsSL https://raw.githubusercontent.com/haliskoc/my_opencode/main/install.sh | bash
 EOF
 }
 
-is_debian_family() {
-  [[ -f /etc/debian_version ]]
-}
+# ============================================================================
+# Utility
+# ============================================================================
 
 have_sudo() {
   command -v sudo >/dev/null 2>&1
@@ -72,95 +119,304 @@ run_as_root() {
   die "This step needs root privileges. Install sudo or run as root."
 }
 
-docker_cmd() {
-  if docker info >/dev/null 2>&1; then
-    docker "$@"
-    return
-  fi
-  if have_sudo; then
-    sudo docker "$@"
-    return
-  fi
-  die "Docker is installed but not accessible. Add your user to docker group or use sudo."
+is_debian_family() {
+  [[ -f /etc/debian_version ]]
 }
 
 setup_logging() {
-  mkdir -p "${WORK_ROOT}/logs"
-  LOG_FILE="${WORK_ROOT}/logs/install-$(date +%Y%m%d-%H%M%S).log"
+  mkdir -p "${HOME}/.local/share/opencode-super/logs"
+  LOG_FILE="${HOME}/.local/share/opencode-super/logs/install-$(date +%Y%m%d-%H%M%S).log"
   exec > >(tee -a "${LOG_FILE}") 2>&1
   trap 'die "Installation failed."' ERR
 }
 
-install_docker_debian_or_ubuntu() {
-  local distro codename
-  distro=""
-  codename=""
+cleanup() {
+  if [[ -n "${WORK_DIR}" && -d "${WORK_DIR}" ]]; then
+    rm -rf "${WORK_DIR}"
+  fi
+}
 
-  if [[ -f /etc/os-release ]]; then
-    # shellcheck disable=SC1091
-    . /etc/os-release
-    if [[ "${ID:-}" == "ubuntu" ]]; then
-      distro="ubuntu"
-      codename="${UBUNTU_CODENAME:-${VERSION_CODENAME:-}}"
-    elif [[ "${ID:-}" == "debian" ]]; then
-      distro="debian"
-      codename="${VERSION_CODENAME:-}"
+trap cleanup EXIT
+
+# ============================================================================
+# Step 1: Detect existing OpenCode
+# ============================================================================
+
+detect_opencode() {
+  header "Step 1/4: Detecting existing OpenCode installation"
+
+  local found=false
+
+  if command -v opencode >/dev/null 2>&1; then
+    local oc_version
+    oc_version="$(opencode --version 2>/dev/null || echo 'unknown')"
+    info "OpenCode CLI found: v${oc_version} ($(command -v opencode))"
+    found=true
+  else
+    info "OpenCode CLI: not installed"
+  fi
+
+  if [[ -d "${OPENCODE_CONFIG_DIR}" ]]; then
+    local skill_count cmd_count
+    skill_count="$(find "${OPENCODE_CONFIG_DIR}/skills" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l || echo 0)"
+    cmd_count="$(find "${OPENCODE_CONFIG_DIR}/commands" -name '*.md' 2>/dev/null | wc -l || echo 0)"
+    info "Config directory: ${OPENCODE_CONFIG_DIR} (${skill_count} skills, ${cmd_count} commands)"
+    found=true
+  else
+    info "Config directory: not found"
+  fi
+
+  if [[ -d "${OPENCODE_DATA_DIR}" ]]; then
+    info "Data directory: ${OPENCODE_DATA_DIR}"
+    found=true
+  fi
+
+  if [[ "${found}" == "true" ]]; then
+    log "Existing OpenCode installation detected"
+    return 0
+  else
+    log "No existing installation found — fresh install"
+    return 1
+  fi
+}
+
+# ============================================================================
+# Step 2: Reset / prepare profile directory
+# ============================================================================
+
+reset_profile() {
+  header "Step 2/4: Resetting OpenCode profile"
+
+  if [[ -d "${OPENCODE_CONFIG_DIR}" ]]; then
+    local backup_path="${OPENCODE_CONFIG_DIR}.backup-$(date +%Y%m%d-%H%M%S)"
+    info "Backing up existing config to: ${backup_path}"
+    cp -r "${OPENCODE_CONFIG_DIR}" "${backup_path}" 2>/dev/null || true
+    rm -rf "${OPENCODE_CONFIG_DIR}"
+    log "Profile reset (backup saved)"
+  else
+    info "No existing profile to reset"
+  fi
+
+  if [[ -d "${OPENCODE_STATE_DIR}" ]]; then
+    rm -rf "${OPENCODE_STATE_DIR}"
+    log "State directory cleaned"
+  fi
+
+  # Uninstall old opencode-ai if doing full reset
+  if command -v npm >/dev/null 2>&1; then
+    if npm list -g opencode-ai >/dev/null 2>&1; then
+      info "Removing existing opencode-ai npm package..."
+      npm uninstall -g opencode-ai 2>/dev/null || true
+      log "Old opencode-ai removed"
     fi
   fi
 
-  [[ -n "${distro}" ]] || die "Unsupported distro for auto Docker install."
-  [[ -n "${codename}" ]] || die "Could not detect distro codename for Docker repo setup."
-
-  log "Docker not found. Installing Docker (${distro}/${codename})..."
-  run_as_root apt-get update
-  run_as_root apt-get install -y ca-certificates curl gnupg
-  run_as_root install -m 0755 -d /etc/apt/keyrings
-  run_as_root bash -c "curl -fsSL https://download.docker.com/linux/${distro}/gpg -o /etc/apt/keyrings/docker.asc"
-  run_as_root chmod a+r /etc/apt/keyrings/docker.asc
-  run_as_root bash -c "echo \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/${distro} ${codename} stable\" > /etc/apt/sources.list.d/docker.list"
-  run_as_root apt-get update
-  run_as_root apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin git
+  log "Clean slate ready"
 }
 
-maybe_install_host_opencode() {
+# ============================================================================
+# Step 3: Install OpenCode CLI
+# ============================================================================
+
+install_opencode() {
+  header "Step 3/4: Installing OpenCode CLI"
+
   if command -v opencode >/dev/null 2>&1; then
-    log "Host OpenCode already installed: $(opencode --version 2>/dev/null || echo unknown)"
+    local current_ver
+    current_ver="$(opencode --version 2>/dev/null || echo 'unknown')"
+    log "OpenCode CLI already installed: v${current_ver}"
     return
   fi
 
-  if [[ "${INSTALL_HOST_OPENCODE_IF_MISSING}" != "true" ]]; then
-    warn "Host OpenCode missing. Skipping by option. Docker image still includes OpenCode."
+  if [[ "${SKIP_OPENCODE_INSTALL}" == "true" ]]; then
+    warn "Skipping OpenCode CLI install (--skip-opencode). Profile will be installed only."
     return
   fi
 
-  if command -v npm >/dev/null 2>&1; then
-    log "Installing host OpenCode CLI with npm..."
-    if npm install -g opencode-ai >/dev/null 2>&1; then
-      log "Host OpenCode installed."
+  # Check for npm
+  if ! command -v npm >/dev/null 2>&1; then
+    # Try to install Node.js
+    if ! command -v node >/dev/null 2>&1; then
+      if is_debian_family; then
+        info "Node.js not found. Installing..."
+        run_as_root apt-get update -qq
+        run_as_root apt-get install -y -qq nodejs npm >/dev/null 2>&1 || true
+      fi
+    fi
+
+    if ! command -v npm >/dev/null 2>&1; then
+      die "npm is required to install OpenCode CLI. Install Node.js 18+ first:
+  Ubuntu/Debian: sudo apt install nodejs npm
+  macOS:         brew install node
+  Other:         https://nodejs.org"
+    fi
+  fi
+
+  info "Installing OpenCode CLI via npm..."
+  if npm install -g opencode-ai 2>&1; then
+    local installed_ver
+    installed_ver="$(opencode --version 2>/dev/null || echo 'unknown')"
+    log "OpenCode CLI installed: v${installed_ver}"
+  else
+    # Try with sudo
+    if have_sudo; then
+      info "Retrying with sudo..."
+      sudo npm install -g opencode-ai 2>&1
+      log "OpenCode CLI installed with sudo"
+    else
+      die "Failed to install OpenCode CLI. Try: sudo npm install -g opencode-ai"
+    fi
+  fi
+}
+
+# ============================================================================
+# Step 4: Install profile
+# ============================================================================
+
+prepare_source() {
+  if [[ -n "${SOURCE_DIR}" && -d "${SOURCE_DIR}/opencode-profile" ]]; then
+    log "Using local source: ${SOURCE_DIR}"
+    return
+  fi
+
+  # Check if script is running from the repo directory
+  if [[ -z "${SOURCE_DIR}" ]]; then
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "")"
+    if [[ -n "${script_dir}" && -d "${script_dir}/opencode-profile" ]]; then
+      SOURCE_DIR="${script_dir}"
+      log "Using script directory: ${SOURCE_DIR}"
       return
     fi
-    warn "Host OpenCode installation failed. Continuing with Docker-only setup."
-    return
   fi
 
-  warn "npm not found. Skipping host OpenCode install. Docker image remains ready to use."
+  # Clone the repository
+  if ! command -v git >/dev/null 2>&1; then
+    if is_debian_family; then
+      run_as_root apt-get update -qq
+      run_as_root apt-get install -y -qq git >/dev/null 2>&1
+    else
+      die "git is required. Install git and retry."
+    fi
+  fi
+
+  WORK_DIR="$(mktemp -d)"
+  SOURCE_DIR="${WORK_DIR}/my_opencode"
+  info "Cloning repository..."
+  git clone --depth 1 --branch "${INSTALL_REF}" "${REPO_URL}" "${SOURCE_DIR}" 2>&1
+  log "Repository cloned"
 }
 
-resolve_version() {
-  if [[ -n "${APP_VERSION}" ]]; then
-    return
+install_profile() {
+  header "Step 4/4: Installing super profile"
+
+  prepare_source
+
+  local profile_src="${SOURCE_DIR}/opencode-profile"
+  [[ -d "${profile_src}" ]] || die "Profile directory not found at: ${profile_src}"
+
+  # Create config directory
+  mkdir -p "${OPENCODE_CONFIG_DIR}"
+
+  # Copy config files
+  info "Copying configuration files..."
+  cp "${profile_src}/opencode.json" "${OPENCODE_CONFIG_DIR}/opencode.json"
+  cp "${profile_src}/oh-my-opencode.json" "${OPENCODE_CONFIG_DIR}/oh-my-opencode.json"
+  log "Config files installed"
+
+  # Copy commands
+  info "Installing commands..."
+  mkdir -p "${OPENCODE_CONFIG_DIR}/commands"
+  cp "${profile_src}"/commands/*.md "${OPENCODE_CONFIG_DIR}/commands/"
+  local cmd_count
+  cmd_count="$(ls -1 "${OPENCODE_CONFIG_DIR}/commands/"*.md | wc -l)"
+  log "${cmd_count} commands installed"
+
+  # Copy skills
+  info "Installing skills..."
+  mkdir -p "${OPENCODE_CONFIG_DIR}/skills"
+  cp -r "${profile_src}"/skills/* "${OPENCODE_CONFIG_DIR}/skills/"
+  local skill_count
+  skill_count="$(find "${OPENCODE_CONFIG_DIR}/skills" -maxdepth 1 -mindepth 1 -type d | wc -l)"
+  log "${skill_count} skills installed"
+
+  # Copy plugins
+  info "Installing plugins..."
+  mkdir -p "${OPENCODE_CONFIG_DIR}/plugins"
+  cp "${profile_src}"/plugins/* "${OPENCODE_CONFIG_DIR}/plugins/"
+  log "Plugins installed"
+
+  # Copy bin scripts
+  info "Installing helper scripts..."
+  mkdir -p "${OPENCODE_CONFIG_DIR}/bin"
+  cp "${profile_src}"/bin/* "${OPENCODE_CONFIG_DIR}/bin/"
+  chmod +x "${OPENCODE_CONFIG_DIR}/bin/"*
+  log "Helper scripts installed"
+
+  # Install npm dependencies (oh-my-opencode, plugin SDK)
+  info "Installing profile dependencies..."
+  cp "${profile_src}/package.json" "${OPENCODE_CONFIG_DIR}/package.json"
+  cp "${profile_src}/package-lock.json" "${OPENCODE_CONFIG_DIR}/package-lock.json"
+  if command -v npm >/dev/null 2>&1; then
+    npm --prefix "${OPENCODE_CONFIG_DIR}" ci --omit=dev 2>&1
+    log "Profile dependencies installed"
+  else
+    warn "npm not found — skipping profile dependency install."
+    warn "Run manually: npm --prefix ~/.config/opencode ci --omit=dev"
   fi
-  if [[ -f "${SOURCE_DIR}/VERSION" ]]; then
-    APP_VERSION="$(tr -d '[:space:]' < "${SOURCE_DIR}/VERSION")"
-  fi
-  if [[ -z "${APP_VERSION}" ]]; then
-    APP_VERSION="1.0.0"
-  fi
+
+  # Create data directories
+  mkdir -p "${OPENCODE_DATA_DIR}"
+  mkdir -p "${HOME}/.cache/opencode" 2>/dev/null || true
+
+  log "Super profile installation complete"
 }
 
-build_install_url() {
-  printf 'https://raw.githubusercontent.com/haliskoc/my_opencode/%s/install.sh' "${INSTALL_REF}"
+# ============================================================================
+# Summary
+# ============================================================================
+
+print_summary() {
+  local oc_version
+  oc_version="$(opencode --version 2>/dev/null || echo 'not installed')"
+
+  printf "\n"
+  printf "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+  printf "${BOLD}${GREEN}  ✅ OpenCode Super Assistant — Installation Complete!${NC}\n"
+  printf "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+  printf "\n"
+  printf "  ${BOLD}OpenCode:${NC} v%s\n" "${oc_version}"
+  printf "  ${BOLD}Profile:${NC}  %s\n" "${OPENCODE_CONFIG_DIR}"
+  printf "  ${BOLD}Log:${NC}      %s\n" "${LOG_FILE}"
+  printf "\n"
+  printf "  ${BOLD}Installed:${NC}\n"
+  printf "    • 46 skills (prompt-engineer, data-modeling, kubernetes-deploy, ...)\n"
+  printf "    • 36 commands (/diagram, /explain, /diff-review, /ship, ...)\n"
+  printf "    • 26 agents (6 primary + 20 subagent)\n"
+  printf "    • 3 MCP servers (context7, gh_grep, websearch)\n"
+  printf "    • 2 plugins (oh-my-opencode, oh-my-local)\n"
+  printf "\n"
+  printf "  ${BOLD}Quick start:${NC}\n"
+  printf "    ${CYAN}opencode${NC}\n"
+  printf "\n"
+  printf "  ${BOLD}Verify installation:${NC}\n"
+  printf "    Inside OpenCode, type: ${CYAN}/doctor${NC}\n"
+  printf "    List agents:  ${CYAN}/agents${NC}\n"
+  printf "    List skills:  ${CYAN}/skills${NC}\n"
+  printf "    List commands: ${CYAN}/help${NC}\n"
+  printf "\n"
+  printf "  ${BOLD}Optional API keys (set before running):${NC}\n"
+  printf "    export OPENAI_API_KEY=\"sk-...\"\n"
+  printf "    export ANTHROPIC_API_KEY=\"sk-ant-...\"\n"
+  printf "    export GOOGLE_API_KEY=\"...\"\n"
+  printf "    export CONTEXT7_API_KEY=\"...\"\n"
+  printf "    export EXA_API_KEY=\"...\"\n"
+  printf "\n"
 }
+
+# ============================================================================
+# Main
+# ============================================================================
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -172,146 +428,84 @@ while [[ $# -gt 0 ]]; do
       REPO_URL="$2"
       shift 2
       ;;
-    --no-install-docker)
-      INSTALL_DOCKER_IF_MISSING="false"
-      shift
-      ;;
-    --skip-host-opencode)
-      INSTALL_HOST_OPENCODE_IF_MISSING="false"
-      shift
-      ;;
     --ref)
       INSTALL_REF="$2"
       shift 2
       ;;
-    --version)
-      APP_VERSION="$2"
-      shift 2
+    --reset)
+      FORCE_RESET="true"
+      shift
+      ;;
+    --no-reset)
+      SKIP_RESET="true"
+      shift
+      ;;
+    --skip-opencode)
+      SKIP_OPENCODE_INSTALL="true"
+      shift
       ;;
     -h|--help)
       usage
       exit 0
       ;;
     *)
-      die "Unknown argument: $1"
+      die "Unknown argument: $1. Use --help for usage."
       ;;
   esac
 done
 
+# --- Banner ---
+printf "\n"
+printf "${BOLD}${CYAN}"
+printf "  ╔═══════════════════════════════════════════════════╗\n"
+printf "  ║        OpenCode Super Assistant Installer         ║\n"
+printf "  ║     46 Skills • 36 Commands • 26 Agents           ║\n"
+printf "  ╚═══════════════════════════════════════════════════╝\n"
+printf "${NC}\n"
+
 setup_logging
 
-if ! command -v docker >/dev/null 2>&1; then
-  if [[ "${INSTALL_DOCKER_IF_MISSING}" == "true" ]]; then
-    if is_debian_family; then
-      install_docker_debian_or_ubuntu
+# Step 1: Detect
+existing_found=false
+if detect_opencode; then
+  existing_found=true
+fi
+
+# Step 2: Reset if needed
+if [[ "${existing_found}" == "true" ]]; then
+  if [[ "${FORCE_RESET}" == "true" ]]; then
+    reset_profile
+  elif [[ "${SKIP_RESET}" == "true" ]]; then
+    info "Skipping reset (--no-reset). Upgrading profile in place."
+  else
+    if [[ ! -t 0 ]]; then
+      # Non-interactive (piped) — auto reset
+      info "Non-interactive mode. Resetting profile for clean install."
+      reset_profile
     else
-      die "Docker not found and auto-install supports Debian/Ubuntu only. Install Docker manually."
+      printf "\n"
+      printf "${YELLOW}Existing OpenCode profile detected.${NC}\n"
+      printf "  1) Reset and reinstall (recommended)\n"
+      printf "  2) Upgrade in place (keep data)\n"
+      printf "  3) Cancel\n"
+      printf "\n"
+      read -rp "Choose [1/2/3] (default: 1): " choice
+      case "${choice}" in
+        2) info "Upgrading in place..." ;;
+        3) log "Cancelled."; exit 0 ;;
+        *) reset_profile ;;
+      esac
     fi
-  else
-    die "Docker not found. Re-run without --no-install-docker or install Docker manually."
   fi
-fi
-
-docker_cmd info >/dev/null 2>&1 || die "Docker daemon is not running or inaccessible. Start Docker and retry."
-
-if ! command -v git >/dev/null 2>&1; then
-  if is_debian_family; then
-    run_as_root apt-get update
-    run_as_root apt-get install -y git
-  else
-    die "git not found. Install git and retry."
-  fi
-fi
-
-maybe_install_host_opencode
-
-if [[ -z "${SOURCE_DIR}" ]]; then
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  if [[ -f "${SCRIPT_DIR}/Dockerfile" ]]; then
-    SOURCE_DIR="${SCRIPT_DIR}"
-  fi
-fi
-
-if [[ -z "${SOURCE_DIR}" ]]; then
-  mkdir -p "${WORK_ROOT}"
-  SOURCE_DIR="${WORK_ROOT}/repo"
-  rm -rf "${SOURCE_DIR}"
-  git clone --depth 1 --branch "${INSTALL_REF}" "${REPO_URL}" "${SOURCE_DIR}"
-fi
-
-[[ -f "${SOURCE_DIR}/Dockerfile" ]] || die "Dockerfile not found at: ${SOURCE_DIR}"
-
-resolve_version
-IMAGE_TAG="opencode-super:${APP_VERSION}"
-INSTALL_URL="$(build_install_url)"
-
-log "Building image: ${IMAGE_TAG}"
-docker_cmd build -t "${IMAGE_TAG}" -t opencode-super:latest "${SOURCE_DIR}"
-
-mkdir -p "${INSTALL_BIN_DIR}"
-cat >"${LAUNCHER_PATH}" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-
-APP_VERSION="__APP_VERSION__"
-IMAGE_TAG="__IMAGE_TAG__"
-INSTALL_URL="__INSTALL_URL__"
-
-if docker info >/dev/null 2>&1; then
-  DOCKER_BIN="docker"
-elif command -v sudo >/dev/null 2>&1; then
-  DOCKER_BIN="sudo docker"
 else
-  echo "Docker is not accessible for current user." >&2
-  exit 1
+  info "Fresh install — no reset needed."
 fi
 
-if [[ "${1:-}" == "--version" || "${1:-}" == "version" ]]; then
-  echo "opencode-super launcher version: ${APP_VERSION}"
-  ${DOCKER_BIN} image inspect "${IMAGE_TAG}" >/dev/null 2>&1 && echo "image present: ${IMAGE_TAG}" || echo "image missing: ${IMAGE_TAG}"
-  exit 0
-fi
+# Step 3: Install OpenCode CLI
+install_opencode
 
-if [[ "${1:-}" == "--self-update" || "${1:-}" == "self-update" ]]; then
-  curl -fsSL "${INSTALL_URL}" | bash
-  exit 0
-fi
+# Step 4: Install profile
+install_profile
 
-RUNTIME_UID="${OPENCODE_SUPER_UID:-$(id -u)}"
-RUNTIME_GID="${OPENCODE_SUPER_GID:-$(id -g)}"
-
-EXTRA_SECURITY_FLAGS=()
-if [[ "${OPENCODE_SUPER_UNSAFE:-0}" != "1" ]]; then
-  EXTRA_SECURITY_FLAGS=(
-    --read-only
-    --tmpfs /tmp:rw,noexec,nosuid,size=256m,mode=1777
-    --tmpfs /home/opencode/.cache:rw,noexec,nosuid,size=256m,uid=${RUNTIME_UID},gid=${RUNTIME_GID},mode=0755
-    --tmpfs /home/opencode/.local/state:rw,noexec,nosuid,size=128m,uid=${RUNTIME_UID},gid=${RUNTIME_GID},mode=0755
-    --security-opt no-new-privileges:true
-    --cap-drop ALL
-    --pids-limit 512
-  )
-fi
-
-${DOCKER_BIN} run -it --rm "${EXTRA_SECURITY_FLAGS[@]}" \
-  --user "${RUNTIME_UID}:${RUNTIME_GID}" \
-  -v "${PWD}:/workspace" \
-  -v "${HOME}/.local/share/opencode:/home/opencode/.local/share/opencode" \
-  -e OPENAI_API_KEY="${OPENAI_API_KEY:-}" \
-  -e CONTEXT7_API_KEY="${CONTEXT7_API_KEY:-}" \
-  -e EXA_API_KEY="${EXA_API_KEY:-}" \
-  "${IMAGE_TAG}" "$@"
-EOF
-sed -i "s|__APP_VERSION__|${APP_VERSION}|g; s|__IMAGE_TAG__|${IMAGE_TAG}|g; s|__INSTALL_URL__|${INSTALL_URL}|g" "${LAUNCHER_PATH}"
-chmod +x "${LAUNCHER_PATH}"
-
-log
-log "Installation complete."
-log "Run: opencode-super"
-log "Version: ${APP_VERSION}"
-log "Log file: ${LOG_FILE}"
-
-if [[ ":$PATH:" != *":${INSTALL_BIN_DIR}:"* ]]; then
-  log "If command is not found, run:"
-  log "  export PATH=\"${INSTALL_BIN_DIR}:\$PATH\""
-fi
+# Done
+print_summary

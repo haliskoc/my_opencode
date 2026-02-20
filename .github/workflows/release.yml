@@ -6,42 +6,24 @@ on:
       - "v*"
 
 jobs:
-  docker-release:
+  publish-release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GHCR
-        uses: docker/login-action@v3
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          node-version: 22
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}/opencode-super
-          tags: |
-            type=ref,event=tag
-            type=raw,value=latest
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+      - name: Validate profile
+        run: |
+          npm --prefix opencode-profile ci --omit=dev
+          node -e "JSON.parse(require('fs').readFileSync('opencode-profile/opencode.json','utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('opencode-profile/oh-my-opencode.json','utf8'))"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
