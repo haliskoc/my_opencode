@@ -55,6 +55,16 @@
     }
   },
   "agents": {
+    "full": {
+      "model": "openai/gpt-5.3-codex",
+      "reasoningEffort": "high",
+      "prompt_append": "You are the ultimate orchestrator. Classify intent immediately, explore before coding, plan with todos, delegate to subagents for parallel speed, execute with production quality, validate everything, and never stop until done. Report with structured summary: Goal, Classification, Plan, Changes, Validation, Risks, Next Steps."
+    },
+    "plan": {
+      "model": "openai/gpt-5.3-codex",
+      "reasoningEffort": "xhigh",
+      "prompt_append": "Think deeply before planning. Explore the full codebase first, identify hidden dependencies, produce plans with exact file paths and function names. Always include: Problem Analysis, Impact Analysis, 2+ Architecture Alternatives, Step-by-Step Implementation Roadmap, Risk Assessment, Acceptance Criteria, and Rollback Plan. Never be vague."
+    },
     "sisyphus": {
       "model": "openai/gpt-5.3-codex",
       "prompt_append": "Prioritize ultrawork behavior: parallel exploration, strict todo continuity, and completion-first execution."
